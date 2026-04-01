@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OrderResource.php Explained</title>
+    <style>
+        :root {
+            --ink: #1f2937;
+            --muted: #4b5563;
+            --paper: #fffdf8;
+            --panel: #ffffff;
+            --accent: #8b5e34;
+            --accent-soft: #f4e9dc;
+            --border: #e5d7c8;
+            --code-bg: #f8f5f0;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at top left, #f6ead9 0, transparent 26%),
+                linear-gradient(180deg, #fcf8f2 0%, #f7f1e8 100%);
+            line-height: 1.65;
+        }
+
+        .page {
+            width: min(980px, calc(100% - 48px));
+            margin: 32px auto;
+            background: var(--paper);
+            border: 1px solid var(--border);
+            box-shadow: 0 18px 50px rgba(77, 55, 33, 0.08);
+            border-radius: 20px;
+            padding: 40px;
+        }
+
+        h1,
+        h2,
+        h3 {
+            line-height: 1.2;
+            margin: 0 0 12px;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+            color: #5c3b1e;
+        }
+
+        h2 {
+            margin-top: 32px;
+            padding-top: 10px;
+            border-top: 2px solid var(--border);
+            color: var(--accent);
+            font-size: 1.35rem;
+        }
+
+        p,
+        li {
+            font-size: 1rem;
+            color: var(--ink);
+        }
+
+        .lead {
+            font-size: 1.05rem;
+            color: var(--muted);
+        }
+
+        .tag {
+            display: inline-block;
+            margin: 0 8px 12px 0;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: var(--accent-soft);
+            color: #6e4723;
+            font-size: 0.9rem;
+        }
+
+        .card {
+            margin-top: 18px;
+            padding: 18px 20px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+        }
+
+        pre {
+            margin: 14px 0 0;
+            padding: 18px;
+            background: var(--code-bg);
+            border: 1px solid #eadfce;
+            border-radius: 14px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            font-size: 0.92rem;
+            line-height: 1.55;
+        }
+
+        code,
+        pre {
+            font-family: "Cascadia Code", Consolas, "Courier New", monospace;
+        }
+
+        .note {
+            margin-top: 12px;
+            padding: 12px 14px;
+            border-left: 4px solid var(--accent);
+            background: #fbf4eb;
+            color: #6c5844;
+        }
+
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media print {
+            body {
+                background: #ffffff;
+            }
+
+            .page {
+                width: 100%;
+                margin: 0;
+                border: 0;
+                border-radius: 0;
+                box-shadow: none;
+                padding: 16px;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .page {
+                width: calc(100% - 24px);
+                padding: 20px;
+            }
+
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <h1>OrderResource.php Explained</h1>
+        <p class="lead">
+            This handout explains how <code>OrderResource.php</code> works in a Laravel + Filament project.
+            The file is responsible for building the order form, computing totals, validating payment,
+            and showing saved orders in the table view.
+        </p>
+
+        <span class="tag">Laravel</span>
+        <span class="tag">Filament Resource</span>
+        <span class="tag">Order Form</span>
+        <span class="tag">Student Notes</span>
+
+        <h2>1. File Header and Imports</h2>
+        <div class="card">
+            <p>
+                This first part tells PHP where the class belongs and which classes it needs to use.
+                The <code>use</code> statements import Filament form components, table components,
+                models, and helper classes.
+            </p>
+            <pre><code>&lt;?php
+
+namespace App\Filament\Resources;
+
+use App\Filament\Resources\OrderResource\Pages;
+use App\Filament\Resources\OrderResource\RelationManagers;
+use App\Models\Order;
+use App\Models\Product;
+use Closure;
+use Filament\Forms;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Form;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Validation\ValidationException;</code></pre>
+            <div class="note">
+                Important idea: importing classes with <code>use</code> makes the file shorter and easier to read.
+            </div>
+        </div>
+
+        <h2>2. Class Declaration</h2>
+        <div class="card">
+            <p>
+                The class extends Filament's <code>Resource</code>. That means this file defines a CRUD interface
+                for the <code>Order</code> model inside the admin panel.
+            </p>
+            <pre><code>class OrderResource extends Resource
+{
+    protected static ?string $model = Order::class;
+
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';</code></pre>
+            <ul>
+                <li><code>$model</code> connects the resource to the <code>Order</code> model.</li>
+                <li><code>$navigationIcon</code> chooses the sidebar icon in Filament.</li>
+            </ul>
+        </div>
+
+        <h2>3. The form() Method</h2>
+        <div class="card">
+            <p>
+                The <code>form()</code> method builds the Create and Edit form for orders.
+                Inside this method, there are helper functions used to calculate totals and update values automatically.
+            </p>
+            <pre><code>public static function form(Form $form): Form
+{
+    $calculations = function (Get $get, Set $set) {
+        $items = $get('../../orderItems');
+        $total = 0;
+
+        if (is_array($items)) {
+            foreach ($items as $item) {
+                $product = Product::find($item['product_id'] ?? null);
+                if ($product) {
+                    $total += $product-&gt;cost_price * (float) ($item['quantity'] ?? 0);
+                }
+            }
+        }
+
+        $set('total', $total);
+    };</code></pre>
+            <ul>
+                <li><code>$calculations</code> loops through all order items.</li>
+                <li>For each item, it gets the selected product from the database.</li>
+                <li>It multiplies <code>cost_price × quantity</code>.</li>
+                <li>It adds all subtotals together and stores the result in the <code>total</code> field.</li>
+            </ul>
+            <div class="note">
+                This closure is used when the product or quantity changes so the total updates live.
+            </div>
+        </div>
+
+        <h2>4. Duplicate Total Helper</h2>
+        <div class="card">
+            <p>
+                This second helper copies the value of <code>total</code> into another field named
+                <code>output_total_duplicate</code>.
+            </p>
+            <pre><code>$totalValue = function (Get $get, Set $set) {
+    $getValue = $get('total');
+
+    $set('output_total_duplicate', $getValue);
+};</code></pre>
+            <p>
+                In simple terms, this is a value-mirroring function. When triggered, it reads the current total
+                and writes that same number to another input.
+            </p>
+        </div>
+
+        <h2>5. Change Calculation Helper</h2>
+        <div class="card">
+            <p>
+                This function appears to calculate change, but in the current file it is never actually called.
+                That means it does not affect the form unless you connect it somewhere.
+            </p>
+            <pre><code>$changeFn = function (Get $get, Set $set) {
+    $order = $get('../../Order');
+    $amountChange = 0;
+
+    if ($order) {
+        $ordered_get = Order::find($order['user_id'] ?? null);
+
+        if ($ordered_get) {
+            $amountChange = $ordered_get-&gt;amountTendered - $ordered_get-&gt;total;
+        }
+
+        $set('change', $amountChange);
+    }
+};</code></pre>
+            <div class="note">
+                Teaching note: this helper looks unfinished or unused. The actual change calculation is done later
+                inside the <code>amount_tendered</code> field.
+            </div>
+        </div>
+
+        <h2>6. Customer Section</h2>
+        <div class="card">
+            <p>
+                The form starts by asking which user placed the order.
+            </p>
+            <pre><code>return $form
+    -&gt;schema([
+        Section::make('Customer\'s Detail')
+            -&gt;schema([
+                Select::make('user_id')
+                    -&gt;relationship('user', 'name')
+                    -&gt;searchable(),
+            ])
+            -&gt;compact(),</code></pre>
+            <ul>
+                <li><code>Select::make('user_id')</code> creates a dropdown for the user.</li>
+                <li><code>relationship('user', 'name')</code> tells Filament to use the related <code>user</code> model and show the <code>name</code>.</li>
+                <li><code>searchable()</code> lets the admin search users quickly.</li>
+            </ul>
+        </div>
+
+        <h2>7. Ordering Section and Repeater</h2>
+        <div class="card">
+            <p>
+                The repeater allows the admin to add many ordered products in one order.
+                Each repeated block represents one row in the order items list.
+            </p>
+            <pre><code>Section::make('Ordering Section')
+    -&gt;schema([
+        Repeater::make('orderItems')
+            -&gt;columnSpanFull()
+            -&gt;relationship()
+            -&gt;schema([
+                Select::make('product_id')
+                    -&gt;relationship('product', 'name')
+                    -&gt;live(debounce: 1000)
+                    -&gt;afterStateUpdated(function (Set $set, $state) {
+                        $product = Product::find($state);
+                        $set('purchase_price', $product-&gt;cost_price ?? 0);
+                    }, $calculations)
+                    -&gt;required()
+                    -&gt;validationMessages([
+                        'required' =&gt; 'Please select a product'
+                    ])
+                    -&gt;searchable()
+                    -&gt;columnSpanFull(),</code></pre>
+            <ul>
+                <li><code>Repeater::make('orderItems')</code> is used because an order can contain many products.</li>
+                <li>The repeater uses the model relationship, so each row is saved as an order item.</li>
+                <li>When a product is selected, the code finds that product and copies its <code>cost_price</code> into <code>purchase_price</code>.</li>
+                <li><code>live(debounce: 1000)</code> means it waits 1 second before reacting, which reduces excessive updates.</li>
+            </ul>
+        </div>
+
+        <h2>8. Purchase Price and Quantity Fields</h2>
+        <div class="card">
+            <pre><code>TextInput::make('purchase_price')
+    -&gt;disabled()
+    -&gt;dehydrated()
+    -&gt;numeric(),
+
+TextInput::make('quantity')
+    -&gt;numeric()
+    -&gt;live(debounce: 1000)
+    -&gt;disabled(fn(Get $get) =&gt; $get('product_id') === null)
+    -&gt;afterStateUpdated($calculations)
+    -&gt;required(),</code></pre>
+            <ul>
+                <li><code>purchase_price</code> is disabled so the user cannot manually change it.</li>
+                <li><code>dehydrated()</code> means the disabled field is still included when the form is saved.</li>
+                <li><code>quantity</code> stays disabled until a product is selected.</li>
+                <li>When quantity changes, the total is recalculated.</li>
+            </ul>
+            <div class="note">
+                This is a good example of dependent form fields: one field becomes available only after another field is filled in.
+            </div>
+        </div>
+
+        <h2>9. Total and Payment Fields</h2>
+        <div class="card">
+            <pre><code>TextInput::make('total')
+    -&gt;numeric()
+    -&gt;disabled()
+    -&gt;dehydrated(),
+
+TextInput::make('amount_tendered')
+    -&gt;numeric()
+    -&gt;live(debounce: 1000)
+    -&gt;disabled(fn(Get $get) =&gt; $get('total') === null || (float) $get('total') === 0.0)
+    -&gt;rules([
+        fn(Get $get): Closure =&gt; function (string $attribute, $value, Closure $fail) use ($get) {
+            $total = (float) $get('total');
+            $amountTendered = (float) $value;
+            if ($total &gt; $amountTendered) {
+                $fail('Amount tendered should be greater than or equal to total.');
+            }
+        },
+    ])
+    -&gt;afterStateUpdated(function (Set $set, Get $get, $state) {
+        $change = (float) $get('amount_tendered') - (float) $get('total');
+        $set('change', $change);
+    })
+    -&gt;required(),</code></pre>
+            <ul>
+                <li><code>total</code> is auto-computed and cannot be typed manually.</li>
+                <li><code>amount_tendered</code> is disabled until the total is greater than zero.</li>
+                <li>A custom validation rule checks that the customer pays enough money.</li>
+                <li>After updating the amount tendered, the code computes <code>change = amount_tendered - total</code>.</li>
+            </ul>
+        </div>
+
+        <h2>10. Duplicate Total Inputs and Change Output</h2>
+        <div class="card">
+            <pre><code>TextInput::make('input_total_duplicate')
+    -&gt;live(debounce: 1000)
+    -&gt;afterStateUpdated($totalValue),
+TextInput::make('output_total_duplicate'),
+TextInput::make('change')
+    -&gt;numeric()
+    -&gt;disabled()</code></pre>
+            <ul>
+                <li><code>input_total_duplicate</code> is a trigger field that runs the duplicate-total helper.</li>
+                <li><code>output_total_duplicate</code> receives the copied total value.</li>
+                <li><code>change</code> shows the remaining money after payment.</li>
+            </ul>
+            <div class="note">
+                For classroom discussion: the duplicate-total fields are unusual in a real order form.
+                They may have been added for practice, testing, or experimentation.
+            </div>
+        </div>
+
+        <h2>11. Table Display</h2>
+        <div class="card">
+            <p>
+                The <code>table()</code> method controls how saved orders appear in the Filament list page.
+            </p>
+            <pre><code>public static function table(Table $table): Table
+{
+    return $table
+        -&gt;columns([
+            TextColumn::make('id'),
+            TextColumn::make('orderItems.product.name')
+                -&gt;listWithLineBreaks(),
+            TextColumn::make('orderItems.purchase_price')
+                -&gt;listWithLineBreaks(),
+            TextColumn::make('orderItems.quantity')
+                -&gt;listWithLineBreaks(),
+            TextColumn::make('sub_total')
+                -&gt;state(fn($record) =&gt; $record-&gt;orderItems-&gt;map(
+                    fn($item) =&gt; $item-&gt;purchase_price * $item-&gt;quantity
+                ))
+                -&gt;listWithLineBreaks()
+                -&gt;money('PHP')
+                -&gt;label('Sub Total'),
+            TextColumn::make('total')
+                -&gt;money('PHP'),
+            TextColumn::make('created_at')
+                -&gt;date('m/d/y')
+        ])</code></pre>
+            <ul>
+                <li><code>TextColumn::make('orderItems.product.name')</code> shows product names from related order items.</li>
+                <li><code>listWithLineBreaks()</code> displays multiple values on separate lines.</li>
+                <li>The <code>sub_total</code> column is custom and calculates each item's subtotal using <code>purchase_price × quantity</code>.</li>
+                <li><code>money('PHP')</code> formats values as Philippine peso currency.</li>
+            </ul>
+        </div>
+
+        <h2>12. Actions and Bulk Actions</h2>
+        <div class="card">
+            <pre><code>-&gt;filters([
+    //
+])
+-&gt;actions([
+    Tables\Actions\EditAction::make(),
+    Tables\Actions\DeleteAction::make(),
+])
+-&gt;bulkActions([
+    Tables\Actions\BulkActionGroup::make([
+        Tables\Actions\DeleteBulkAction::make(),
+    ]),
+]);</code></pre>
+            <ul>
+                <li>No table filters are defined yet.</li>
+                <li>The resource supports editing and deleting one order at a time.</li>
+                <li>It also supports deleting multiple selected orders at once.</li>
+            </ul>
+        </div>
+
+        <h2>13. Relations and Pages</h2>
+        <div class="card">
+            <pre><code>public static function getRelations(): array
+{
+    return [
+        //
+    ];
+}
+
+public static function getPages(): array
+{
+    return [
+        'index' =&gt; Pages\ListOrders::route('/'),
+        'create' =&gt; Pages\CreateOrder::route('/create'),
+        'edit' =&gt; Pages\EditOrder::route('/{record}/edit'),
+    ];
+}</code></pre>
+            <ul>
+                <li><code>getRelations()</code> is empty, so no extra relation managers are attached.</li>
+                <li><code>getPages()</code> defines the three main routes: list, create, and edit.</li>
+            </ul>
+        </div>
+
+        <h2>14. Summary for Students</h2>
+        <div class="card">
+            <div class="two-col">
+                <div>
+                    <h3>What this file does</h3>
+                    <ul>
+                        <li>Builds the order input form</li>
+                        <li>Lets the user select customer and products</li>
+                        <li>Computes total automatically</li>
+                        <li>Validates payment amount</li>
+                        <li>Calculates customer change</li>
+                        <li>Displays saved orders in a table</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3>Important concepts used</h3>
+                    <ul>
+                        <li>Filament Resource</li>
+                        <li>Form schema</li>
+                        <li>Repeater fields</li>
+                        <li>Relationships</li>
+                        <li>Live field updates</li>
+                        <li>Custom validation rules</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <h2>15. Full Original Code</h2>
+        <div class="card">
+            <p>
+                This is the full original <code>OrderResource.php</code> source included for reference.
+            </p>
+            <pre><code>&lt;?php
+
+namespace App\Filament\Resources;
+
+use App\Filament\Resources\OrderResource\Pages;
+use App\Filament\Resources\OrderResource\RelationManagers;
+use App\Models\Order;
+use App\Models\Product;
+use Closure;
+use Filament\Forms;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Form;
+use Filament\Forms\Get; //get value inside the textinput
+use Filament\Forms\Set; //set new value inside the textinput
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Validation\ValidationException;
+
+class OrderResource extends Resource
+{
+    protected static ?string $model = Order::class;
+
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+
+    public static function form(Form $form): Form
+    {
+        $calculations = function (Get $get, Set $set) {
+            $items = $get('../../orderItems');
+            $total = 0;
+
+            if (is_array($items)) {
+                foreach ($items as $item) {
+                    $product = Product::find($item['product_id'] ?? null);
+                    if ($product) {
+                        $total += $product-&gt;cost_price * (float) ($item['quantity'] ?? 0);
+                    }
+                }
+            }
+
+            $set('total', $total);
+        };
+
+        $totalValue = function (Get $get, Set $set) {
+            $getValue = $get('total');
+
+            $set('output_total_duplicate', $getValue);
+        };
+
+        $changeFn = function (Get $get, Set $set) {
+            $order = $get('../../Order');
+            $amountChange = 0;
+
+            if ($order) {
+                $ordered_get = Order::find($order['user_id'] ?? null);
+
+                if ($ordered_get) {
+                    $amountChange = $ordered_get-&gt;amountTendered - $ordered_get-&gt;total;
+                }
+
+                $set('change', $amountChange);
+            }
+        };
+
+        return $form
+            -&gt;schema([
+                Section::make('Customer\'s Detail')
+                    -&gt;schema([
+                        Select::make('user_id')
+                            -&gt;relationship('user', 'name')
+                            -&gt;searchable(),
+                    ])
+                    -&gt;compact(),
+                Section::make('Ordering Section')
+                    -&gt;schema([
+                        Repeater::make('orderItems')
+                            -&gt;columnSpanFull()
+                            -&gt;relationship()
+                            -&gt;schema([
+                                Select::make('product_id')
+                                    -&gt;relationship('product', 'name')
+                                    -&gt;live(debounce: 1000)
+                                    -&gt;afterStateUpdated(function (Set $set, $state) {
+                                        $product = Product::find($state); //query
+                                        $set('purchase_price', $product-&gt;cost_price ?? 0);
+                                    }, $calculations)
+                                    -&gt;required()
+                                    -&gt;validationMessages([
+                                        'required' =&gt; 'Please select a product'
+                                    ])
+                                    -&gt;searchable()
+                                    -&gt;columnSpanFull(),
+                                TextInput::make('purchase_price')
+                                    -&gt;disabled()
+                                    -&gt;dehydrated()
+                                    -&gt;numeric(),
+
+
+                                TextInput::make('quantity')
+                                    -&gt;numeric()
+                                    -&gt;live(debounce: 1000)
+                                    -&gt;disabled(fn(Get $get) =&gt; $get('product_id') === null)
+                                    -&gt;afterStateUpdated($calculations)
+                                    // -&gt;afterStateUpdated(function (Get $get, Set $set, $component) use ($calculations) {
+                                    //     if ($get('product_id') == null) {
+                                    //         throw ValidationException::withMessages([
+                                    //             $component-&gt;getStatePath() =&gt; 'Please select product first.',
+                                    //         ]);
+                                    //     }
+                                    //     $calculations($get, $set);
+                                    // })
+                                    -&gt;required(),
+                            ]),
+                        TextInput::make('total')
+                            -&gt;numeric()
+                            -&gt;disabled()
+                            -&gt;dehydrated(),
+
+                        TextInput::make('amount_tendered')
+                            -&gt;numeric()
+                            -&gt;live(debounce: 1000)
+                            -&gt;disabled(fn(Get $get) =&gt; $get('total') === null || (float) $get('total') === 0.0)
+                            -&gt;rules([
+                                fn(Get $get): Closure =&gt; function (string $attribute, $value, Closure $fail) use ($get) {
+                                    $total = (float) $get('total');
+                                    $amountTendered = (float) $value;
+                                    if ($total &gt; $amountTendered) {
+                                        $fail('Amount tendered should be greater than or equal to total.');
+                                    }
+                                },
+                            ])
+                            -&gt;afterStateUpdated(function (Set $set, Get $get, $state) {
+                                $change = (float) $get('amount_tendered') - (float) $get('total');
+                                $set('change', $change);
+                            })
+                            -&gt;required(),
+                        TextInput::make('input_total_duplicate')
+                            -&gt;live(debounce: 1000)
+                            -&gt;afterStateUpdated($totalValue),
+                        TextInput::make('output_total_duplicate'),
+                        TextInput::make('change')
+                            -&gt;numeric()
+                            -&gt;disabled()
+
+
+                    ])
+                    -&gt;columns(2)
+                    -&gt;compact(),
+            ]);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            -&gt;columns([
+                TextColumn::make('id'),
+                TextColumn::make('orderItems.product.name')
+                    -&gt;listWithLineBreaks(),
+                TextColumn::make('orderItems.purchase_price')
+                    -&gt;listWithLineBreaks(),
+                TextColumn::make('orderItems.quantity')
+                    -&gt;listWithLineBreaks(),
+                TextColumn::make('sub_total')
+                    -&gt;state(fn($record) =&gt; $record-&gt;orderItems-&gt;map(
+                        fn($item) =&gt; $item-&gt;purchase_price * $item-&gt;quantity
+                    ))
+                    -&gt;listWithLineBreaks()
+                    -&gt;money('PHP')
+                    -&gt;label('Sub Total'),
+                TextColumn::make('total')
+                    -&gt;money('PHP'),
+                TextColumn::make('created_at')
+                    -&gt;date('m/d/y')
+
+            ])
+            -&gt;filters([
+                //
+            ])
+            -&gt;actions([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+            ])
+            -&gt;bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
+            ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            //
+        ];
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' =&gt; Pages\ListOrders::route('/'),
+            'create' =&gt; Pages\CreateOrder::route('/create'),
+            'edit' =&gt; Pages\EditOrder::route('/{record}/edit'),
+        ];
+    }
+}</code></pre>
+        </div>
+    </main>
+</body>
+</html>
