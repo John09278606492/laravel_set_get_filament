@@ -36,11 +36,11 @@ class OrderResource extends Resource
             $total = 0;
 
             if (is_array($items)) {
-                foreach ($items as $item) {
-                    $product = Product::find($item['product_id'] ?? null);
+                foreach ($items as $item) { //$item = product_id
+                    $product = Product::find($item['product_id'] ?? null); // 1
                     if ($product) {
                         $total += $product->cost_price * (float) ($item['quantity'] ?? 0);
-                    }
+                    } //15 * 
                 }
             }
 
@@ -68,12 +68,12 @@ class OrderResource extends Resource
                             ->columnSpanFull()
                             ->relationship()
                             ->schema([
-                                Select::make('product_id')
+                                Select::make('product_id') //pk -> Product model 1id
                                     ->relationship('product', 'name')
                                     ->live(debounce: 1000)
-                                    ->afterStateUpdated(function (Set $set, $state) {
+                                    ->afterStateUpdated(function (Set $set, $state) { //1 fk
                                         $product = Product::find($state); //query
-                                        $set('purchase_price', $product->cost_price ?? 0);
+                                        $set('purchase_price', $product->product_name ?? 0);
                                     }, $calculations)
                                     ->required()
                                     ->validationMessages([
@@ -149,10 +149,12 @@ class OrderResource extends Resource
                 TextColumn::make('orderItems.product.name')
                     ->listWithLineBreaks(),
                 TextColumn::make('orderItems.purchase_price')
+                    ->label('Product Price')
                     ->listWithLineBreaks(),
                 TextColumn::make('orderItems.quantity')
+                    ->label('Quantity')
                     ->listWithLineBreaks(),
-                TextColumn::make('sub_total')
+                TextColumn::make('sub_total') //$record = Order
                     ->state(fn($record) => $record->orderItems->map(
                         fn($item) => $item->purchase_price * $item->quantity
                     ))

@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filament Get, Set, Repeater, and Table State Notes</title>
+    <style>
+        :root {
+            --ink: #172033;
+            --muted: #526071;
+            --paper: #ffffff;
+            --soft: #f3f7f6;
+            --line: #d9e2df;
+            --accent: #116466;
+            --accent-dark: #0b4648;
+            --warn-bg: #fff7e8;
+            --warn-line: #edc16c;
+            --code-bg: #f7f8fa;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            font-size: 16px;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: var(--ink);
+            background: #eef3f2;
+            line-height: 1.58;
+        }
+
+        .page {
+            width: min(980px, calc(100% - 48px));
+            margin: 32px auto;
+            padding: 42px;
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: 0 18px 50px rgba(23, 32, 51, 0.10);
+        }
+
+        h1,
+        h2,
+        h3 {
+            line-height: 1.22;
+            margin: 0 0 12px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: var(--accent-dark);
+            letter-spacing: 0;
+        }
+
+        h2 {
+            margin-top: 34px;
+            padding-top: 18px;
+            border-top: 2px solid var(--line);
+            color: var(--accent);
+            font-size: 1.38rem;
+            letter-spacing: 0;
+            break-after: avoid;
+        }
+
+        h3 {
+            margin-top: 22px;
+            color: #20314a;
+            font-size: 1.08rem;
+            break-after: avoid;
+        }
+
+        p,
+        li,
+        td,
+        th {
+            font-size: 0.98rem;
+        }
+
+        p {
+            margin: 0 0 12px;
+        }
+
+        ul,
+        ol {
+            margin: 8px 0 18px 24px;
+            padding: 0;
+        }
+
+        li {
+            margin: 4px 0;
+        }
+
+        code {
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.92em;
+            background: var(--code-bg);
+            border: 1px solid #e2e6ea;
+            border-radius: 4px;
+            padding: 1px 4px;
+        }
+
+        pre {
+            margin: 14px 0 18px;
+            padding: 14px 16px;
+            overflow-x: auto;
+            background: var(--code-bg);
+            border: 1px solid #dce3e8;
+            border-radius: 8px;
+            line-height: 1.48;
+            break-inside: avoid;
+        }
+
+        pre code {
+            display: block;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            font-size: 0.86rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 14px 0 22px;
+            break-inside: avoid;
+        }
+
+        th,
+        td {
+            border: 1px solid var(--line);
+            padding: 9px 10px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            background: var(--soft);
+            color: var(--accent-dark);
+        }
+
+        .lead {
+            color: var(--muted);
+            font-size: 1.05rem;
+            margin-top: 8px;
+        }
+
+        .meta {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin: 22px 0;
+        }
+
+        .meta div,
+        .callout,
+        .warning,
+        .checkpoint {
+            border-radius: 8px;
+            padding: 12px 14px;
+        }
+
+        .meta div {
+            background: var(--soft);
+            border: 1px solid var(--line);
+        }
+
+        .meta strong {
+            display: block;
+            color: var(--accent-dark);
+        }
+
+        .callout {
+            margin: 14px 0 18px;
+            background: var(--soft);
+            border-left: 5px solid var(--accent);
+        }
+
+        .warning {
+            margin: 14px 0 18px;
+            background: var(--warn-bg);
+            border-left: 5px solid var(--warn-line);
+        }
+
+        .checkpoint {
+            margin: 14px 0 18px;
+            background: #f7fbff;
+            border-left: 5px solid #4c8fd1;
+        }
+
+        .label {
+            display: inline-block;
+            margin: 0 6px 8px 0;
+            padding: 5px 9px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: #fbfdfd;
+            color: var(--accent-dark);
+            font-size: 0.85rem;
+        }
+
+        .small {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        @page {
+            size: A4;
+            margin: 14mm;
+        }
+
+        @media print {
+            body {
+                background: #ffffff;
+            }
+
+            .page {
+                width: auto;
+                margin: 0;
+                padding: 0;
+                border: 0;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            h2 {
+                break-after: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <h1>Filament Get, Set, Repeater, and Table State Notes</h1>
+        <p class="lead">Project-specific notes for the Kaido Kit order form in <code>app/Filament/Resources/OrderResource.php</code>. These notes explain how Filament reads form values, writes computed values, calculates totals inside a repeater, and displays calculated table columns.</p>
+
+        <div>
+            <span class="label">Laravel</span>
+            <span class="label">Filament Forms</span>
+            <span class="label">Get</span>
+            <span class="label">Set</span>
+            <span class="label">Repeater</span>
+            <span class="label">Table State</span>
+        </div>
+
+        <section class="meta">
+            <div>
+                <strong>Main file</strong>
+                <code>app/Filament/Resources/OrderResource.php</code>
+            </div>
+            <div>
+                <strong>Related database table</strong>
+                <code>order_items</code>
+            </div>
+            <div>
+                <strong>Main form relationship</strong>
+                <code>Order hasMany OrderItem</code>
+            </div>
+            <div>
+                <strong>Main goal</strong>
+                Automatically compute order totals from selected products and quantities.
+            </div>
+        </section>
+
+        <h2>1. The Big Idea</h2>
+        <p>Filament forms keep a temporary copy of the form data while the user is typing. This temporary data is called the form state. <code>Get</code> reads from that state. <code>Set</code> writes to that state.</p>
+
+        <pre><code class="language-php">use Filament\Forms\Get;
+use Filament\Forms\Set;</code></pre>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Helper</th>
+                    <th>Purpose</th>
+                    <th>Simple meaning</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>Get $get</code></td>
+                    <td>Reads the current value of another field.</td>
+                    <td><code>$get('product_id')</code> means "what product is selected right now?"</td>
+                </tr>
+                <tr>
+                    <td><code>Set $set</code></td>
+                    <td>Changes the current value of another field.</td>
+                    <td><code>$set('purchase_price', 150)</code> means "put 150 into the purchase price field."</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="callout">
+            <strong>Important:</strong> <code>Get</code> and <code>Set</code> work on the form state first. They do not immediately save to the database. The values are saved when the form is submitted and Filament dehydrates the form state.
+        </div>
+
+        <h2>2. Project Data Structure</h2>
+        <p>Your order form is built around these models and relationships:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Important fields</th>
+                    <th>Relationship</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>Order</code></td>
+                    <td><code>user_id</code>, <code>total</code>, <code>amount_tendered</code></td>
+                    <td><code>Order</code> has many <code>OrderItem</code> records through <code>orderItems()</code></td>
+                </tr>
+                <tr>
+                    <td><code>OrderItem</code></td>
+                    <td><code>order_id</code>, <code>product_id</code>, <code>purchase_price</code>, <code>quantity</code></td>
+                    <td><code>OrderItem</code> belongs to <code>Order</code> and belongs to <code>Product</code></td>
+                </tr>
+                <tr>
+                    <td><code>Product</code></td>
+                    <td><code>name</code>, <code>description</code>, <code>cost_price</code></td>
+                    <td>Selected by <code>product_id</code> inside each order item row</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p>The <code>order_items</code> migration confirms that <code>purchase_price</code> and <code>quantity</code> are numeric decimal columns:</p>
+
+        <pre><code class="language-php">$table-&gt;foreignId('order_id')-&gt;constrained();
+$table-&gt;foreignId('product_id')-&gt;constrained();
+$table-&gt;decimal('purchase_price', 10, 2);
+$table-&gt;decimal('quantity', 10, 2);</code></pre>
+
+        <h2>3. What The Form State Looks Like</h2>
+        <p>When a user creates an order, Filament may hold form data like this before saving:</p>
+
+        <pre><code class="language-php">[
+    'user_id' =&gt; 1,
+    'orderItems' =&gt; [
+        [
+            'product_id' =&gt; 1,
+            'purchase_price' =&gt; 15.00,
+            'quantity' =&gt; 2,
+        ],
+        [
+            'product_id' =&gt; 2,
+            'purchase_price' =&gt; 20.00,
+            'quantity' =&gt; 3,
+        ],
+    ],
+    'total' =&gt; 90.00,
+    'amount_tendered' =&gt; 100.00,
+    'change' =&gt; 10.00,
+]</code></pre>
+
+        <p>That array is the idea students should imagine when they see <code>$get()</code> and <code>$set()</code>.</p>
+
+        <h2>4. The Repeater In This Project</h2>
+        <p>Your order items are inside this repeater:</p>
+
+        <pre><code class="language-php">Repeater::make('orderItems')
+    -&gt;relationship()
+    -&gt;schema([
+        Select::make('product_id'),
+        TextInput::make('purchase_price'),
+        TextInput::make('quantity'),
+    ])</code></pre>
+
+        <p>The name <code>orderItems</code> is not random. It matches the relationship method in the <code>Order</code> model:</p>
+
+        <pre><code class="language-php">public function orderItems(): HasMany
+{
+    return $this-&gt;hasMany(OrderItem::class);
+}</code></pre>
+
+        <p>Because of <code>-&gt;relationship()</code>, Filament knows that every row inside the repeater should be saved as an <code>OrderItem</code> record connected to the current <code>Order</code>.</p>
+
+        <h2>5. Relative Paths In A Repeater</h2>
+        <p>The most confusing part for students is usually this line:</p>
+
+        <pre><code class="language-php">$items = $get('../../orderItems');</code></pre>
+
+        <p>Inside a repeater row, <code>$get()</code> starts from the current row. So if the callback is inside <code>quantity</code>, then:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Meaning</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>$get('product_id')</code></td>
+                    <td>Get the selected product in the current repeater row.</td>
+                </tr>
+                <tr>
+                    <td><code>$get('quantity')</code></td>
+                    <td>Get the quantity in the current repeater row.</td>
+                </tr>
+                <tr>
+                    <td><code>$get('../')</code></td>
+                    <td>Move up from the current field toward the current row state.</td>
+                </tr>
+                <tr>
+                    <td><code>$get('../../orderItems')</code></td>
+                    <td>Move up to the parent form area, then read the whole <code>orderItems</code> repeater.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="checkpoint">
+            <strong>Student checkpoint:</strong> If you only need data from the same row, use names like <code>product_id</code> or <code>quantity</code>. If you need all rows, use a parent path such as <code>../../orderItems</code>.
+        </div>
+
+        <h2>6. The Calculation Callback</h2>
+        <p>Your code defines one reusable function for calculating the order total:</p>
+
+        <pre><code class="language-php">$calculations = function (Get $get, Set $set) {
+    $items = $get('../../orderItems');
+    $total = 0;
+
+    if (is_array($items)) {
+        foreach ($items as $item) {
+            $product = Product::find($item['product_id'] ?? null);
+
+            if ($product) {
+                $total += $product-&gt;cost_price * (float) ($item['quantity'] ?? 0);
+            }
+        }
+    }
+
+    $set('total', $total);
+};</code></pre>
+
+        <h3>Line-by-line explanation</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Explanation</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>function (Get $get, Set $set)</code></td>
+                    <td>Filament injects the <code>Get</code> and <code>Set</code> helpers into the callback.</td>
+                </tr>
+                <tr>
+                    <td><code>$items = $get('../../orderItems');</code></td>
+                    <td>Read all repeater rows from the form state.</td>
+                </tr>
+                <tr>
+                    <td><code>$total = 0;</code></td>
+                    <td>Start the total at zero before adding each item subtotal.</td>
+                </tr>
+                <tr>
+                    <td><code>if (is_array($items))</code></td>
+                    <td>Make sure the repeater data is an array before looping.</td>
+                </tr>
+                <tr>
+                    <td><code>foreach ($items as $item)</code></td>
+                    <td>Loop through every order item row.</td>
+                </tr>
+                <tr>
+                    <td><code>Product::find($item['product_id'] ?? null)</code></td>
+                    <td>Find the selected product from the database. If no product is selected, use <code>null</code>.</td>
+                </tr>
+                <tr>
+                    <td><code>$product-&gt;cost_price * quantity</code></td>
+                    <td>Multiply product price by the quantity entered by the user.</td>
+                </tr>
+                <tr>
+                    <td><code>$set('total', $total)</code></td>
+                    <td>Write the calculated total back into the form state.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Example calculation</h3>
+        <p>Suppose the user adds two order items:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Product 1</td>
+                    <td>15.00</td>
+                    <td>2</td>
+                    <td>30.00</td>
+                </tr>
+                <tr>
+                    <td>Product 2</td>
+                    <td>20.00</td>
+                    <td>3</td>
+                    <td>60.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <pre><code class="language-text">Total = 30.00 + 60.00
+Total = 90.00</code></pre>
+
+        <h2>7. Project-Specific Correction For Total Path</h2>
+        <p>The <code>total</code> field is outside the repeater:</p>
+
+        <pre><code class="language-php">TextInput::make('total')
+    -&gt;numeric()
+    -&gt;disabled()
+    -&gt;dehydrated()</code></pre>
+
+        <p>Because the calculation callback runs from inside the repeater, it is safer to set the parent form's <code>total</code> field using:</p>
+
+        <pre><code class="language-php">$set('../../total', $total);</code></pre>
+
+        <p>Instead of:</p>
+
+        <pre><code class="language-php">$set('total', $total);</code></pre>
+
+        <div class="warning">
+            <strong>Why this matters:</strong> From inside a repeater row, <code>$set('total', $total)</code> can mean "set a field named total inside this current row." But your actual <code>total</code> field belongs to the main order form, outside <code>orderItems</code>.
+        </div>
+
+        <h2>8. Teaching-Friendly Calculation Version</h2>
+        <p>For students, this version is easier to understand because it uses the row's saved <code>purchase_price</code> and <code>quantity</code> directly:</p>
+
+        <pre><code class="language-php">$calculations = function (Get $get, Set $set) {
+    $items = $get('../../orderItems') ?? [];
+    $total = 0;
+
+    foreach ($items as $item) {
+        $price = (float) ($item['purchase_price'] ?? 0);
+        $quantity = (float) ($item['quantity'] ?? 0);
+
+        $total += $price * $quantity;
+    }
+
+    $set('../../total', $total);
+};</code></pre>
+
+        <p>This also matches the table calculation later:</p>
+
+        <pre><code class="language-php">$item-&gt;purchase_price * $item-&gt;quantity</code></pre>
+
+        <h2>9. Product Select: Using <code>afterStateUpdated</code></h2>
+        <p>Your product field is:</p>
+
+        <pre><code class="language-php">Select::make('product_id')
+    -&gt;relationship('product', 'name')
+    -&gt;live(debounce: 1000)
+    -&gt;afterStateUpdated(function (Set $set, $state) {
+        $product = Product::find($state);
+        $set('purchase_price', $product-&gt;product_name ?? 0);
+    }, $calculations)</code></pre>
+
+        <p>Here is what each part means:</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Meaning</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>Select::make('product_id')</code></td>
+                    <td>This field stores the selected product's ID in <code>order_items.product_id</code>.</td>
+                </tr>
+                <tr>
+                    <td><code>-&gt;relationship('product', 'name')</code></td>
+                    <td>Use the <code>product()</code> relationship from <code>OrderItem</code>, and display the product's <code>name</code>.</td>
+                </tr>
+                <tr>
+                    <td><code>-&gt;live(debounce: 1000)</code></td>
+                    <td>Send the updated value to Filament after the user changes it. The 1000 means wait around one second.</td>
+                </tr>
+                <tr>
+                    <td><code>$state</code></td>
+                    <td>The new selected product ID.</td>
+                </tr>
+                <tr>
+                    <td><code>Product::find($state)</code></td>
+                    <td>Find the chosen product record.</td>
+                </tr>
+                <tr>
+                    <td><code>$set('purchase_price', ...)</code></td>
+                    <td>Put the product price into the same repeater row's <code>purchase_price</code> field.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>Important project-specific fix</h3>
+        <p>Your <code>products</code> table uses <code>name</code> and <code>cost_price</code>. It does not have <code>product_name</code>. Also, your <code>purchase_price</code> column is decimal, so it should receive a price, not a product name.</p>
+
+        <pre><code class="language-php">$set('purchase_price', $product?-&gt;cost_price ?? 0);</code></pre>
+
+        <h3>Recommended version</h3>
+        <p>In the installed Filament code in this project, <code>afterStateUpdated()</code> accepts one callback. To run both "set purchase price" and "recalculate total", place both actions inside one callback:</p>
+
+        <pre><code class="language-php">Select::make('product_id')
+    -&gt;relationship('product', 'name')
+    -&gt;live(debounce: 1000)
+    -&gt;afterStateUpdated(function (Get $get, Set $set, $state) use ($calculations) {
+        $product = Product::find($state);
+
+        $set('purchase_price', $product?-&gt;cost_price ?? 0);
+
+        $calculations($get, $set);
+    })
+    -&gt;required()
+    -&gt;searchable();</code></pre>
+
+        <h2>10. Quantity Field: Disabling Until Product Is Selected</h2>
+        <p>Your quantity field contains this condition:</p>
+
+        <pre><code class="language-php">-&gt;disabled(fn (Get $get) =&gt; $get('product_id') === null)</code></pre>
+
+        <p>This means:</p>
+
+        <pre><code class="language-text">If product_id is null:
+    disable quantity
+
+If product_id has a value:
+    enable quantity</code></pre>
+
+        <p>Because this code is inside a repeater row, <code>$get('product_id')</code> reads the product selected in the same row.</p>
+
+        <div class="checkpoint">
+            <strong>Student checkpoint:</strong> The quantity input depends on the product select. This prevents the user from typing quantity before choosing a product.
+        </div>
+
+        <h2>11. Quantity Field: Recalculating After Typing</h2>
+        <p>Your quantity field also has:</p>
+
+        <pre><code class="language-php">-&gt;live(debounce: 1000)
+-&gt;afterStateUpdated($calculations)</code></pre>
+
+        <p>When the user changes quantity, Filament waits about one second, sends the new value to the server, and then runs the calculation callback.</p>
+
+        <p>The flow is:</p>
+
+        <ol>
+            <li>User selects a product.</li>
+            <li>Filament sets <code>purchase_price</code>.</li>
+            <li>User enters quantity.</li>
+            <li><code>afterStateUpdated($calculations)</code> runs.</li>
+            <li>The callback reads all repeater rows.</li>
+            <li>The callback computes the total.</li>
+            <li><code>Set</code> writes the result into the <code>total</code> field.</li>
+        </ol>
+
+        <h2>12. Disabled Fields And <code>dehydrated()</code></h2>
+        <p>Your <code>purchase_price</code> field is:</p>
+
+        <pre><code class="language-php">TextInput::make('purchase_price')
+    -&gt;disabled()
+    -&gt;dehydrated()
+    -&gt;numeric()</code></pre>
+
+        <p>Your <code>total</code> field is:</p>
+
+        <pre><code class="language-php">TextInput::make('total')
+    -&gt;numeric()
+    -&gt;disabled()
+    -&gt;dehydrated()</code></pre>
+
+        <p>This is important because disabled fields are normally not editable by the user. Adding <code>-&gt;dehydrated()</code> tells Filament to still include the value when saving the form.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Why disabled?</th>
+                    <th>Why dehydrated?</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>purchase_price</code></td>
+                    <td>The system should fill it from the selected product.</td>
+                    <td>It must be saved to <code>order_items.purchase_price</code>.</td>
+                </tr>
+                <tr>
+                    <td><code>total</code></td>
+                    <td>The system should calculate it automatically.</td>
+                    <td>It must be saved to <code>orders.total</code>.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>13. Amount Tendered Validation</h2>
+        <p>Your <code>amount_tendered</code> field is disabled until a valid total exists:</p>
+
+        <pre><code class="language-php">-&gt;disabled(fn (Get $get) =&gt;
+    $get('total') === null || (float) $get('total') === 0.0
+)</code></pre>
+
+        <p>This means the cashier cannot enter payment until the order has a total.</p>
+
+        <p>The custom rule checks that the payment is enough:</p>
+
+        <pre><code class="language-php">-&gt;rules([
+    fn (Get $get): Closure =&gt; function (string $attribute, $value, Closure $fail) use ($get) {
+        $total = (float) $get('total');
+        $amountTendered = (float) $value;
+
+        if ($total &gt; $amountTendered) {
+            $fail('Amount tendered should be greater than or equal to total.');
+        }
+    },
+])</code></pre>
+
+        <p>The logic is:</p>
+
+        <pre><code class="language-text">If total is greater than amount tendered:
+    show validation error</code></pre>
+
+        <h2>14. Computing Change With <code>Set</code></h2>
+        <p>Your amount tendered field calculates change after it is updated:</p>
+
+        <pre><code class="language-php">-&gt;afterStateUpdated(function (Set $set, Get $get, $state) {
+    $change = (float) $get('amount_tendered') - (float) $get('total');
+    $set('change', $change);
+})</code></pre>
+
+        <p>Here, <code>Get</code> reads the payment and total. Then <code>Set</code> writes the computed change into the <code>change</code> field.</p>
+
+        <p>Example:</p>
+
+        <pre><code class="language-text">amount_tendered = 100
+total = 90
+
+change = 100 - 90
+change = 10</code></pre>
+
+        <p>In your current database migration, <code>change</code> is not part of the <code>orders</code> table. So this field can be shown on the form without being saved, unless you later add a <code>change</code> column.</p>
+
+        <h2>15. Form Callbacks Vs Table State</h2>
+        <p><code>Get</code> and <code>Set</code> are for form state. The table uses a different idea: <code>state()</code>.</p>
+
+        <p>In your table columns:</p>
+
+        <pre><code class="language-php">TextColumn::make('sub_total')
+    -&gt;state(fn ($record) =&gt; $record-&gt;orderItems-&gt;map(
+        fn ($item) =&gt; $item-&gt;purchase_price * $item-&gt;quantity
+    ))
+    -&gt;listWithLineBreaks()
+    -&gt;money('PHP')
+    -&gt;label('Sub Total')</code></pre>
+
+        <p>Here, <code>$record</code> is not form state. It is an actual <code>Order</code> model loaded from the database.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Form</th>
+                    <th>Table</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Uses <code>Get</code> and <code>Set</code>.</td>
+                    <td>Uses <code>$record</code> and <code>state()</code>.</td>
+                </tr>
+                <tr>
+                    <td>Works before saving, while the user is editing.</td>
+                    <td>Works after saving, while displaying database records.</td>
+                </tr>
+                <tr>
+                    <td>Reads temporary form values.</td>
+                    <td>Reads model values from the database.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>16. <code>map()</code> For Subtotals</h2>
+        <p>This code:</p>
+
+        <pre><code class="language-php">-&gt;state(fn ($record) =&gt; $record-&gt;orderItems-&gt;map(
+    fn ($item) =&gt; $item-&gt;purchase_price * $item-&gt;quantity
+))</code></pre>
+
+        <p>means:</p>
+
+        <pre><code class="language-text">For every order item:
+    compute purchase_price * quantity
+    return each computed value</code></pre>
+
+        <p>Example:</p>
+
+        <pre><code class="language-php">$record-&gt;orderItems = [
+    ['purchase_price' =&gt; 15, 'quantity' =&gt; 2],
+    ['purchase_price' =&gt; 20, 'quantity' =&gt; 3],
+];</code></pre>
+
+        <p>The <code>map()</code> result is:</p>
+
+        <pre><code class="language-php">[
+    30,
+    60,
+]</code></pre>
+
+        <p>Because you added <code>-&gt;listWithLineBreaks()</code>, Filament displays those values on separate lines.</p>
+
+        <h2>17. <code>sum()</code> For Total</h2>
+        <p>This code:</p>
+
+        <pre><code class="language-php">-&gt;state(fn ($record) =&gt; $record-&gt;orderItems-&gt;sum(
+    fn ($item) =&gt; $item-&gt;purchase_price * $item-&gt;quantity
+))</code></pre>
+
+        <p>means:</p>
+
+        <pre><code class="language-text">For every order item:
+    compute purchase_price * quantity
+    add all results together</code></pre>
+
+        <p>Using the same example:</p>
+
+        <pre><code class="language-text">15 * 2 = 30
+20 * 3 = 60
+
+sum = 30 + 60
+sum = 90</code></pre>
+
+        <div class="callout">
+            <strong>Teaching point:</strong> <code>map()</code> gives many results. <code>sum()</code> gives one final number. If you wanted the highest subtotal only, that would be <code>max()</code>, not <code>sum()</code>.
+        </div>
+
+        <h2>18. Why Store <code>purchase_price</code> In Order Items?</h2>
+        <p>The <code>order_items</code> table stores <code>purchase_price</code> even though the product already has <code>cost_price</code>. This is a common order system pattern.</p>
+
+        <p>Reason: product prices can change in the future. If a product costs 15 today and becomes 20 next month, old orders should still show the price at the time of purchase.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Meaning</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>products.cost_price</code></td>
+                    <td>The current product price.</td>
+                </tr>
+                <tr>
+                    <td><code>order_items.purchase_price</code></td>
+                    <td>The price copied into the order at checkout time.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>19. Full Recommended Teaching Snippet</h2>
+        <p>This snippet keeps the code aligned with your current project structure:</p>
+
+        <pre><code class="language-php">$calculations = function (Get $get, Set $set) {
+    $items = $get('../../orderItems') ?? [];
+    $total = 0;
+
+    foreach ($items as $item) {
+        $price = (float) ($item['purchase_price'] ?? 0);
+        $quantity = (float) ($item['quantity'] ?? 0);
+
+        $total += $price * $quantity;
+    }
+
+    $set('../../total', $total);
+};</code></pre>
+
+        <pre><code class="language-php">Select::make('product_id')
+    -&gt;relationship('product', 'name')
+    -&gt;live(debounce: 1000)
+    -&gt;afterStateUpdated(function (Get $get, Set $set, $state) use ($calculations) {
+        $product = Product::find($state);
+
+        $set('purchase_price', $product?-&gt;cost_price ?? 0);
+
+        $calculations($get, $set);
+    })
+    -&gt;required()
+    -&gt;searchable()
+    -&gt;columnSpanFull();</code></pre>
+
+        <pre><code class="language-php">TextInput::make('quantity')
+    -&gt;numeric()
+    -&gt;live(debounce: 1000)
+    -&gt;disabled(fn (Get $get) =&gt; $get('product_id') === null)
+    -&gt;afterStateUpdated($calculations)
+    -&gt;required();</code></pre>
+
+        <h2>20. Common Student Mistakes</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Mistake</th>
+                    <th>Why it happens</th>
+                    <th>Fix</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Using <code>$get('orderItems')</code> inside a repeater row</td>
+                    <td>The callback starts inside the current row, so it cannot find the parent repeater directly.</td>
+                    <td>Use <code>$get('../../orderItems')</code>.</td>
+                </tr>
+                <tr>
+                    <td>Using <code>$set('total', $total)</code> from inside a repeater</td>
+                    <td>It may target the current row instead of the parent form.</td>
+                    <td>Use <code>$set('../../total', $total)</code>.</td>
+                </tr>
+                <tr>
+                    <td>Setting <code>purchase_price</code> to product name</td>
+                    <td>The field name may confuse beginners.</td>
+                    <td>Set it to <code>$product?-&gt;cost_price ?? 0</code>.</td>
+                </tr>
+                <tr>
+                    <td>Forgetting <code>-&gt;live()</code></td>
+                    <td>The callback may not run when the student expects.</td>
+                    <td>Add <code>-&gt;live(debounce: 1000)</code> to fields that should react.</td>
+                </tr>
+                <tr>
+                    <td>Forgetting <code>-&gt;dehydrated()</code> on disabled calculated fields</td>
+                    <td>Disabled fields are display-only by default behavior.</td>
+                    <td>Add <code>-&gt;dehydrated()</code> when the value must be saved.</td>
+                </tr>
+                <tr>
+                    <td>Thinking table <code>state()</code> uses <code>Get</code> and <code>Set</code></td>
+                    <td>Both are named "state", but they happen in different places.</td>
+                    <td>Remember: forms use <code>Get</code>/<code>Set</code>; tables use <code>$record</code>.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>21. Vocabulary For Students</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Term</th>
+                    <th>Simple definition</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>State</td>
+                    <td>The current value of a form field or component.</td>
+                </tr>
+                <tr>
+                    <td>Get</td>
+                    <td>Read a form value.</td>
+                </tr>
+                <tr>
+                    <td>Set</td>
+                    <td>Write a form value.</td>
+                </tr>
+                <tr>
+                    <td>Repeater</td>
+                    <td>A form component that lets the user add multiple rows of related data.</td>
+                </tr>
+                <tr>
+                    <td>Relationship repeater</td>
+                    <td>A repeater that saves rows to a related model, like <code>OrderItem</code>.</td>
+                </tr>
+                <tr>
+                    <td>Live field</td>
+                    <td>A field that sends updates to Filament while the user is editing.</td>
+                </tr>
+                <tr>
+                    <td>Debounce</td>
+                    <td>A delay before sending the update, useful to avoid too many requests.</td>
+                </tr>
+                <tr>
+                    <td>Dehydrated</td>
+                    <td>Included when Filament prepares the data for saving.</td>
+                </tr>
+                <tr>
+                    <td>Table state</td>
+                    <td>A displayed value for a table column, often calculated from the model record.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>22. Mini Exercises</h2>
+        <ol>
+            <li>Explain why <code>$get('product_id')</code> works inside the quantity field.</li>
+            <li>Explain why <code>$get('../../orderItems')</code> is needed to calculate the whole order total.</li>
+            <li>Change the calculation to use <code>purchase_price</code> instead of querying <code>Product::find()</code> inside the loop.</li>
+            <li>Given <code>purchase_price = 12</code> and <code>quantity = 5</code>, compute the item subtotal.</li>
+            <li>Explain the difference between <code>map()</code> and <code>sum()</code> in the table columns.</li>
+            <li>Explain why <code>purchase_price</code> should be saved even if the product price changes later.</li>
+        </ol>
+
+        <h2>23. Short Quiz With Answers</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Question</th>
+                    <th>Answer</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>What does <code>$get('product_id')</code> do?</td>
+                    <td>It reads the current selected product ID from the form state.</td>
+                </tr>
+                <tr>
+                    <td>What does <code>$set('purchase_price', 50)</code> do?</td>
+                    <td>It places <code>50</code> into the <code>purchase_price</code> field.</td>
+                </tr>
+                <tr>
+                    <td>What is <code>$state</code> inside the product select callback?</td>
+                    <td>The newly selected product ID.</td>
+                </tr>
+                <tr>
+                    <td>Why does the total calculation loop through <code>orderItems</code>?</td>
+                    <td>Because the order can have multiple products, and each row contributes to the total.</td>
+                </tr>
+                <tr>
+                    <td>What does <code>map()</code> return?</td>
+                    <td>A collection of transformed values, such as one subtotal per order item.</td>
+                </tr>
+                <tr>
+                    <td>What does <code>sum()</code> return?</td>
+                    <td>One number, the total of all computed values.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>24. Final Mental Model</h2>
+        <p>Teach students to remember this simple flow:</p>
+
+        <pre><code class="language-text">User changes product or quantity
+        |
+        v
+Filament updates form state because the field is live
+        |
+        v
+afterStateUpdated() runs
+        |
+        v
+Get reads the needed values
+        |
+        v
+PHP calculates the result
+        |
+        v
+Set writes the result back into another field
+        |
+        v
+Filament saves dehydrated fields when the form is submitted</code></pre>
+
+        <p>The table display is separate:</p>
+
+        <pre><code class="language-text">Order is already saved
+        |
+        v
+Filament table loads $record
+        |
+        v
+state() calculates display values from $record-&gt;orderItems
+        |
+        v
+map() shows each subtotal, sum() shows one total</code></pre>
+
+        <p class="small">Prepared for the Kaido Kit Laravel project. The examples are based on the current order form, order item migration, and model relationships in this project folder.</p>
+    </main>
+</body>
+</html>
